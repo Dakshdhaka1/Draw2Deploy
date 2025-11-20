@@ -120,3 +120,44 @@ export const getCurrentUserEmail = (): string | null => {
     return null;
   }
 };
+
+export const getCurrentUserName = (): { firstName: string; lastName: string } | null => {
+  const token = localStorage.getItem('d2d_token');
+  if (!token) return null;
+
+  try {
+    // Decode JWT to get firstName and lastName
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    const payload = JSON.parse(atob(parts[1]));
+    const firstName = payload.firstName || '';
+    const lastName = payload.lastName || '';
+    
+    if (firstName || lastName) {
+      return { firstName, lastName };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+// =========================
+// GET CURRENT USER INFO (from API)
+// =========================
+
+export type UserInfo = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  verified: boolean;
+};
+
+export const getCurrentUserInfo = async (): Promise<ApiResponse<UserInfo>> => {
+  try {
+    return await apiGet<UserInfo>('/api/user/me');
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
+};

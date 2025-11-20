@@ -41,7 +41,7 @@ function VerificationPage() {
       setMessage('Profile verified')
       
       setTimeout(() => {
-        navigate('/dashboard', { replace: true })
+        navigate('/welcome', { replace: true })
       }, 1000)
     } catch (error) {
       setStatus('error')

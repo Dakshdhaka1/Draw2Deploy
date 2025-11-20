@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { logout, verifyUser } from '../api/auth'
-import { getAllProjects, deleteProject, generateTerraform, checkAiServiceStatus, type Project } from '../api/project'
+import { getAllProjects, deleteProject, generateTerraform, downloadTerraform, checkAiServiceStatus, type Project, type TerraformDownload } from '../api/project'
 import Alert from '../components/Alert'
 import Logo from '../components/Logo'
 import ThemeToggle from '../components/ThemeToggle'
@@ -16,6 +16,7 @@ function DashboardPage() {
   const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [generationProgress, setGenerationProgress] = useState<number>(0)
   const [aiServiceStatus, setAiServiceStatus] = useState<{ available: boolean; message: string } | null>(null)
+  const [downloadData, setDownloadData] = useState<Record<string, TerraformDownload>>({})
 
   // Check verification status
   useEffect(() => {
@@ -79,6 +80,12 @@ function DashboardPage() {
       await deleteProject(projectId)
       const data = await getAllProjects()
       setProjects(data)
+      // Clear download data for deleted project
+      setDownloadData((prev) => {
+        const newData = { ...prev }
+        delete newData[projectId]
+        return newData
+      })
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete project')
     } finally {
@@ -133,13 +140,14 @@ function DashboardPage() {
       
       // Start terraform generation (this is the long operation)
       // The progress will continue updating via the interval
-      await generateTerraform(projectId)
+      const download = await generateTerraform(projectId)
       
       // Complete the progress
       if (progressInterval) clearInterval(progressInterval)
       setGenerationProgress(100)
       
-      // Success - file download should start automatically
+      // Store download data for the download button
+      setDownloadData(prev => ({ ...prev, [projectId]: download }))
       setError('') // Clear any previous errors
       
       // Reset progress after a short delay
@@ -191,20 +199,38 @@ function DashboardPage() {
       <main className="mx-auto w-full max-w-6xl px-6 pb-20">
         {/* Verify Email Section - Only show if not verified */}
         {isVerified === false && (
-          <section className="mb-8 rounded-3xl border border-blue-200 bg-blue-50/60 px-6 py-5 shadow-sm ring-1 ring-blue-100 dark:border-blue-700 dark:bg-blue-900/20 dark:ring-blue-800">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Verify your email</p>
-                <p className="text-sm text-blue-700/80 dark:text-blue-300/80">
-                  Complete verification to unlock deployment actions.
-                </p>
+          <section className="mb-8 rounded-3xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-yellow-50 px-6 py-6 shadow-lg ring-2 ring-amber-200 dark:border-amber-600 dark:from-amber-900/30 dark:to-yellow-900/20 dark:ring-amber-800">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-white">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
               </div>
-              <Link
-                to="/verify"
-                className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-blue-700 hover:to-blue-800 hover:shadow-xl"
-              >
-                Go to verification
-              </Link>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100 mb-1">
+                  ⚠️ Email Verification Required
+                </h3>
+                <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                  <strong>Please check your email inbox</strong> and click the verification link we sent you. 
+                  You must verify your email before you can generate Terraform modules and use all features.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    to="/verify"
+                    className="rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:from-amber-700 hover:to-amber-800 hover:shadow-xl"
+                  >
+                    Go to Verification Page
+                  </Link>
+                  <a
+                    href="mailto:"
+                    className="rounded-xl border-2 border-amber-300 bg-white px-5 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 dark:border-amber-600 dark:bg-slate-800 dark:text-amber-300 dark:hover:bg-slate-700"
+                  >
+                    Open Email Client
+                  </a>
+                </div>
+              </div>
             </div>
           </section>
         )}
@@ -335,45 +361,74 @@ function DashboardPage() {
                     )}
                     
                     <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => handleGenerateTerraform(project.id)}
-                        disabled={generatingId === project.id || !isVerified || (aiServiceStatus?.available === false)}
-                        className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:from-blue-600 disabled:hover:to-blue-700"
-                        title={
-                          !isVerified 
-                            ? 'Verify email to generate Terraform' 
-                            : (aiServiceStatus?.available === false)
-                            ? 'AI service is not available'
-                            : 'Generate Terraform module'
-                        }
-                      >
-                        {generatingId === project.id ? (
+                      {downloadData[project.id] ? (
+                        <button
+                          onClick={() => {
+                            if (downloadData[project.id]) {
+                              downloadTerraform(downloadData[project.id])
+                            }
+                          }}
+                          className="flex-1 rounded-xl bg-gradient-to-r from-green-600 to-green-700 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:from-green-700 hover:to-green-800 hover:shadow-xl"
+                          title="Download Terraform module"
+                        >
                           <span className="flex items-center justify-center gap-2">
                             <svg
-                              className="h-4 w-4 animate-spin"
+                              className="h-4 w-4"
                               fill="none"
+                              stroke="currentColor"
                               viewBox="0 0 24 24"
                             >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              />
                               <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                               />
                             </svg>
-                            Generating...
+                            Download TF
                           </span>
-                        ) : (
-                          'Generate TF'
-                        )}
-                      </button>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleGenerateTerraform(project.id)}
+                          disabled={generatingId === project.id || !isVerified || (aiServiceStatus?.available === false)}
+                          className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:from-blue-600 disabled:hover:to-blue-700"
+                          title={
+                            !isVerified 
+                              ? 'Verify email to generate Terraform' 
+                              : (aiServiceStatus?.available === false)
+                              ? 'AI service is not available'
+                              : 'Generate Terraform module'
+                          }
+                        >
+                          {generatingId === project.id ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <svg
+                                className="h-4 w-4 animate-spin"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                />
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                />
+                              </svg>
+                              Generating...
+                            </span>
+                          ) : (
+                            'Generate TF'
+                          )}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(project.id)}
                         disabled={deletingId === project.id}

@@ -3,7 +3,6 @@ import type { FormEvent } from 'react'
 import TextInput from './TextInput'
 import Alert from './Alert'
 import { loginUser } from '../api/auth'
-import ResendVerification from './ResendVerification'
 
 type LoginFormProps = {
   onSuccess?: () => void
@@ -62,7 +61,6 @@ function LoginForm({ onSuccess, showHeading = true }: LoginFormProps) {
           {status === 'loading' ? 'Signing in...' : 'Sign in'}
         </button>
       </form>
-      <ResendVerification email={email} visible={Boolean(email)} />
     </div>
   )
 }

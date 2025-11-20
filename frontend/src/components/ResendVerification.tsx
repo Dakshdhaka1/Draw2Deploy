@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { resendVerificationEmail } from '../api/auth'
-import Alert from './Alert'
 
 type ResendVerificationProps = {
   email?: string
@@ -39,24 +38,20 @@ function ResendVerification({ email, visible = false }: ResendVerificationProps)
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-semibold text-slate-900">Need another verification email?</p>
-        <button
-          type="button"
-          onClick={handleClick}
-          disabled={!email || status === 'loading'}
-          className="rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {status === 'loading' ? 'Sending…' : 'Send again'}
-        </button>
-        {message ? (
-          <Alert variant={status === 'error' ? 'error' : 'success'} message={message} />
-        ) : null}
-        {!email ? (
-          <p className="text-xs text-slate-600">Enter your email above to enable resend.</p>
-        ) : null}
-      </div>
+    <div className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={!email || status === 'loading'}
+        className="text-sm font-medium text-blue-600 hover:text-blue-700 underline transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:no-underline dark:text-blue-400 dark:hover:text-blue-300"
+      >
+        {status === 'loading' ? 'Sending…' : 'Resend verification email'}
+      </button>
+      {message && (
+        <span className={`text-sm font-medium ${status === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+          {message}
+        </span>
+      )}
     </div>
   )
 }

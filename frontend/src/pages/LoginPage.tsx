@@ -16,7 +16,7 @@ function LoginPage() {
         </>
       }
     >
-      <LoginForm onSuccess={() => navigate('/dashboard', { replace: true })} />
+      <LoginForm onSuccess={() => navigate('/welcome', { replace: true })} />
     </AuthShell>
   )
 }

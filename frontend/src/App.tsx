@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import WelcomePage from './pages/WelcomePage'
 import DashboardPage from './pages/DashboardPage'
 import VerificationPage from './pages/VerificationPage'
 import EmailVerificationPage from './pages/EmailVerificationPage'
@@ -16,6 +17,7 @@ function App() {
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/verify-email" element={<EmailVerificationPage />} />
       <Route element={<ProtectedRoute />}>
+        <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/verify" element={<VerificationPage />} />
         <Route path="/projects/new" element={<NewProjectPage />} />

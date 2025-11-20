@@ -111,7 +111,12 @@ export const deleteProject = async (
 // =========================
 // GENERATE TERRAFORM ZIP
 // =========================
-export const generateTerraform = async (projectId: string): Promise<void> => {
+export type TerraformDownload = {
+  blob: Blob
+  filename: string
+}
+
+export const generateTerraform = async (projectId: string): Promise<TerraformDownload> => {
   const token = getToken()
   if (!token) throw new Error('Please login first.')
 
@@ -136,18 +141,24 @@ export const generateTerraform = async (projectId: string): Promise<void> => {
 
     if (contentType?.includes('application/octet-stream')) {
       const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `terraform_project_${projectId}.zip`
-      a.click()
-      window.URL.revokeObjectURL(url)
+      const filename = `terraform_project_${projectId}.zip`
+      return { blob, filename }
     } else {
       throw new Error('Unexpected response format')
     }
   } catch (error) {
     throw new Error(getApiErrorMessage(error))
   }
+}
+
+// Helper function to trigger download
+export const downloadTerraform = (download: TerraformDownload): void => {
+  const url = window.URL.createObjectURL(download.blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = download.filename
+  a.click()
+  window.URL.revokeObjectURL(url)
 }
 
 
